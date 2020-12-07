@@ -151,12 +151,12 @@ for a few hundred milliseconds, as long as we're lot stalling for tens of second
 _after_ the parallel verifier completes. 
 
 Accumulated:
-![](images/total-times_mod2_1M.png)
+![](images/total-times_mod3_1M.png)
 
 The `validation` dropped from `44` to `40`!
  
 Per-chunk:
-![](images/times_mod2_1M.png)
+![](images/times_mod3_1M.png)
 
 
 ### Summary
