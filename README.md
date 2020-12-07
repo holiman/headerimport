@@ -143,7 +143,7 @@ Per-chunk:
 
 Let's try to make it even faster. 
 
-### 1M blocks with less syncronization (`mod3`)
+## 1M blocks with less syncronization (`mod3`)
 
 There's a check, after each header validated, whether the chain is exiting. This is performed via an `atomic` check. Atomics are useful, but 
 they're not a lot faster than `sync.Mutex`, so they do carry an overhead. Now, when the chain is exiting, it doesn't quite matter if we stall 
@@ -158,8 +158,25 @@ The `validation` dropped from `44` to `40`!
 Per-chunk:
 ![](images/times_mod3_1M.png)
 
+## 1M blocks without `Now`
+
+When running a profiler, I saw that a lot of time was spent on `time.Now()`. Apparently the `time.Now` is a non-trivial operations, which returns a 
+struct representing the time in nanoseconds, in both wall-clock format and monotonic clock format. 
+This call was being made for every header, to check if it was too far off in the future ( go-ethereum allows a drift of up to, but not exceeding `15s`). 
+
+Since all the verifications are done within one second, we can instead take the time once, for each chunk, and pass it to the parallel verifiers. 
+
+Accumulated:
+![](images/total-times_mod4_1M.png)
+
+Validation is now at `38s`, and writes at `~24s`.
+I made one change to the charts, so it skips plotting out the very first point, to make the chart display nicer:
+
+Per-chunk:
+![](images/times_mod4_1M.png)
+
 
 ### Summary
 
-With these changes, we got down to a `64s` for `1M` headers, from `106s` on `master`, and `80s` on [PR 21471](https://github.com/ethereum/go-ethereum/pull/21471/files).
+With these changes, we got down to a `62s` for `1M` headers, from `106s` on `master`, and `80s` on [PR 21471](https://github.com/ethereum/go-ethereum/pull/21471/files).
 
