@@ -221,8 +221,8 @@ func render(xvalues, writes, validations []float64, name string) {
 					StrokeColor: chart.GetDefaultColor(0), //.WithAlpha(64),
 					FillColor:   chart.GetDefaultColor(0).WithAlpha(64),
 				},
-				XValues: xvalues,
-				YValues: writes,
+				XValues: xvalues[1:],
+				YValues: writes[1:],
 			},
 			chart.ContinuousSeries{
 				Name: "Validation time (ms)",
@@ -230,8 +230,8 @@ func render(xvalues, writes, validations []float64, name string) {
 					StrokeColor: chart.GetDefaultColor(1), //.WithAlpha(64),
 					FillColor:   chart.GetDefaultColor(1).WithAlpha(64),
 				},
-				XValues: xvalues,
-				YValues: validations,
+				XValues: xvalues[1:],
+				YValues: validations[1:],
 			},
 		},
 	}
