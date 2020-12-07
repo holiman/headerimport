@@ -141,3 +141,25 @@ Per-chunk:
 ![](images/times_mod2_1M.png)
 
 
+Let's try to make it even faster. 
+
+### 1M blocks with less syncronization (`mod3`)
+
+There's a check, after each header validated, whether the chain is exiting. This is performed via an `atomic` check. Atomics are useful, but 
+they're not a lot faster than `sync.Mutex`, so they do carry an overhead. Now, when the chain is exiting, it doesn't quite matter if we stall 
+for a few hundred milliseconds, as long as we're lot stalling for tens of seconds. So we can move that check to instead be performed
+_after_ the parallel verifier completes. 
+
+Accumulated:
+![](images/total-times_mod2_1M.png)
+
+The `validation` dropped from `44` to `40`!
+ 
+Per-chunk:
+![](images/times_mod2_1M.png)
+
+
+### Summary
+
+With these changes, we got down to a `64s` for `1M` headers, from `106s` on `master`, and `80s` on [PR 21471](https://github.com/ethereum/go-ethereum/pull/21471/files).
+
