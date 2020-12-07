@@ -180,3 +180,42 @@ Per-chunk:
 
 With these changes, we got down to a `62s` for `1M` headers, from `106s` on `master`, and `80s` on [PR 21471](https://github.com/ethereum/go-ethereum/pull/21471/files).
 
+## 1M blocks with faster difficulty calculator (`mod5`)
+
+The final one, I hardly believe myself. But let's see some benchmarks first: 
+```
+BenchmarkDifficultyCalculator/big-6             	 2638527	       383 ns/op	      80 B/op	       7 allocs/op
+BenchmarkDifficultyCalculator/big-frontier-6         	 1767679	      1065 ns/op	     280 B/op	      12 allocs/op
+```
+
+Apparently the difficulty calculators are not very optimized; both slow and heavy on allocs.
+
+If we re-write the difficulty calculators to be based on `uint256`:
+
+```
+BenchmarkDifficultyCalculator/u256-6   		     	 8936229	       135 ns/op	      64 B/op	       2 allocs/op
+BenchmarkDifficultyCalculator/u256-frontier-6        	10010191	       163 ns/op	      64 B/op	       2 allocs/op
+```
+
+So apparently, the we can cut the average time by a third, and for the segment (0-1M blocks) we're experimenting with, we can take it down almost by an order
+of magnitude, from `1ms` to `0.16ms`. Which also relieves some GC-pressure. Let's try it: 
+
+Accumulated:
+![](images/total-times_mod5_1M.png)
+
+
+Per-chunk:
+![](images/times_mod5_1M.png)
+
+
+With the last changeset, the total `validation` time goes down to `34s`, and write-time to `20s`. Which brings the total down from 
+
+1. On master, `106s`,
+2. On [PR 21471](https://github.com/ethereum/go-ethereum/pull/21471/files) `80s`
+3. And finally, `54s`!
+
+Tantalizingly close to an even doubling in speed!
+
+
+
+
