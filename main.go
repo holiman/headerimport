@@ -163,17 +163,20 @@ func writeLoop(db ethdb.Database, headerCh chan []*types.Header, closeCh chan bo
 	var headersWritten uint64
 
 	var xVals []float64
+	var writeTimesTot []float64
+	var validationTimesTot []float64
 	var writeTimes []float64
 	var validationTimes []float64
 	// Needed on 'master'
-	whFunc := func(header *types.Header) error {
-		_, err := hc.WriteHeader(header)
-		return err
-	}
+	//whFunc := func(header *types.Header) error {
+	//	_, err := hc.WriteHeader(header)
+	//	return err
+	//}
 	for {
 		select {
 		case hdrs := <-headerCh:
 			if hdrs == nil {
+				render(xVals, writeTimesTot, validationTimesTot, "total-times")
 				render(xVals, writeTimes, validationTimes, "times")
 				return
 			}
@@ -183,9 +186,9 @@ func writeLoop(db ethdb.Database, headerCh chan []*types.Header, closeCh chan bo
 				return
 			}
 			t1 := time.Now()
-			//if _, err := hc.InsertHeaderChain(hdrs, t1); err != nil {
-
-			if _, err := hc.InsertHeaderChain(hdrs, whFunc, t1); err != nil {
+			// needed on master
+			//if _, err := hc.InsertHeaderChain(hdrs, whFunc, t1); err != nil {
+			if _, err := hc.InsertHeaderChain(hdrs, t1); err != nil {
 				log.Error("Write error", "error", err)
 				return
 			}
@@ -196,8 +199,10 @@ func writeLoop(db ethdb.Database, headerCh chan []*types.Header, closeCh chan bo
 			validationTime += vTime
 			writeTime += wTime
 			xVals = append(xVals, float64(headersWritten))
-			validationTimes = append(validationTimes, float64(validationTime/time.Millisecond))
-			writeTimes = append(writeTimes, float64(writeTime/time.Millisecond))
+			validationTimesTot = append(validationTimesTot, float64(validationTime/time.Millisecond))
+			writeTimesTot = append(writeTimesTot, float64(writeTime/time.Millisecond))
+			validationTimes = append(validationTimes, float64(vTime/time.Millisecond))
+			writeTimes = append(writeTimes, float64(wTime/time.Millisecond))
 			log.Info("Wrote headers", "count", len(hdrs), "vtime", vTime,
 				"wtime", wTime, "all", headersWritten, "totV", validationTime,
 				"totW", writeTime)
