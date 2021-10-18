@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -14,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -67,7 +67,7 @@ func doImport(ancientDir string, count int) error {
 		log.Info("Cleaning temp db", "path", path)
 		os.RemoveAll(path)
 	}()
-	if db, err = rawdb.NewLevelDBDatabaseWithFreezer(path, 100, 500_000, fmt.Sprintf("%v/ancients", path), "foo"); err != nil {
+	if db, err = rawdb.NewLevelDBDatabaseWithFreezer(path, 100, 500_000, fmt.Sprintf("%v/ancients", path), "foo", false); err != nil {
 		return fmt.Errorf("Failed creating temp db: %v", err)
 	}
 	defer db.Close()
@@ -109,10 +109,11 @@ const chunkSize = 2048
 
 func readLoop(from, to uint64, freezer Retriever, headerCh chan []*types.Header, closeCh chan bool) {
 	var chunk = make([]*types.Header, 0, chunkSize)
+	defer close(headerCh)
 	for i := from; i < to; i++ {
 		data, err := freezer.Retrieve(i)
 		if err != nil {
-			log.Error("Read error: %v", err)
+			log.Error("Read error", "err", err)
 			return
 		}
 		var h = new(types.Header)
@@ -129,20 +130,19 @@ func readLoop(from, to uint64, freezer Retriever, headerCh chan []*types.Header,
 			}
 		}
 	}
-	close(headerCh)
 	return
 }
 
 func writeLoop(db ethdb.Database, headerCh chan []*types.Header, closeCh chan bool) {
 	engine := ethash.New(ethash.Config{
 		CacheDir:         "./ethash-caches",
-		CachesInMem:      eth.DefaultConfig.Ethash.CachesInMem,
-		CachesOnDisk:     eth.DefaultConfig.Ethash.CachesOnDisk,
-		CachesLockMmap:   eth.DefaultConfig.Ethash.CachesLockMmap,
+		CachesInMem:      ethconfig.Defaults.Ethash.CachesInMem,
+		CachesOnDisk:     ethconfig.Defaults.Ethash.CachesOnDisk,
+		CachesLockMmap:   ethconfig.Defaults.Ethash.CachesLockMmap,
 		DatasetDir:       "./ethash-dag",
-		DatasetsInMem:    eth.DefaultConfig.Ethash.DatasetsInMem,
-		DatasetsOnDisk:   eth.DefaultConfig.Ethash.DatasetsOnDisk,
-		DatasetsLockMmap: eth.DefaultConfig.Ethash.DatasetsLockMmap,
+		DatasetsInMem:    ethconfig.Defaults.Ethash.DatasetsInMem,
+		DatasetsOnDisk:   ethconfig.Defaults.Ethash.DatasetsOnDisk,
+		DatasetsLockMmap: ethconfig.Defaults.Ethash.DatasetsLockMmap,
 	}, nil, false)
 	var interrupt int32
 	// insertStopped returns true after StopInsert has been called.
